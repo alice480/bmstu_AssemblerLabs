@@ -1,0 +1,199 @@
+     1                                  %include "../lib64.asm"
+     2                              <1>          section .text     ; сегмент кода
+     3                              <1> IntToStr64: 
+     4 00000000 57                  <1>          push   rdi
+     5 00000001 53                  <1>          push   rbx
+     6 00000002 52                  <1>          push   rdx
+     7 00000003 51                  <1>          push   rcx
+     8 00000004 56                  <1> 		 push   rsi
+     9 00000005 C60600              <1> 		 mov    byte[rsi],0 ; на место знака
+    10 00000008 83F800              <1>          cmp    eax,0
+    11 0000000B 7D05                <1>          jge    .l1
+    12 0000000D F7D8                <1>          neg    eax
+    13 0000000F C6062D              <1>          mov    byte[rsi],'-'
+    14 00000012 C646060A            <1> .l1      mov    byte[rsi+6],10
+    15 00000016 BF05000000          <1>          mov    rdi,5
+    16 0000001B 66BB0A00            <1>          mov    bx,10
+    17 0000001F 6699                <1> .again:  cwd           ; расширили слово до двойного
+    18 00000021 66F7F3              <1>          div    bx     ; делим результат на 10
+    19 00000024 80C230              <1>          add    dl,30h ; получаем из остатка код цифры
+    20 00000027 88143E              <1>          mov    [rsi+rdi],dl ; пишем символ в строку
+    21 0000002A 48FFCF              <1>          dec    rdi    ; переводим указатель на  
+    22                              <1>                        ; предыдущую позицию
+    23 0000002D 6683F800            <1>          cmp    ax, 0  ; преобразовали все число?
+    24 00000031 75EC                <1>          jne    .again
+    25 00000033 B906000000          <1>          mov    rcx, 6
+    26 00000038 4829F9              <1>          sub    rcx, rdi ; длина результата+знак
+    27 0000003B 4889C8              <1> 		 mov    rax,rcx
+    28 0000003E 48FFC0              <1> 		 inc    rax    ; длина результата+OA
+    29 00000041 48FFC6              <1>          inc    rsi    ; пропускаем знак
+    30 00000044 56                  <1> 		 push   rsi
+    31 00000045 488D343E            <1>          lea    rsi,[rsi+rdi] ; начало результата
+    32 00000049 5F                  <1> 		 pop    rdi
+    33 0000004A F3A4                <1>          rep movsb
+    34 0000004C 5E                  <1>          pop    rsi  
+    35 0000004D 59                  <1>          pop    rcx
+    36 0000004E 5A                  <1>          pop    rdx
+    37 0000004F 5B                  <1>          pop    rbx
+    38 00000050 5F                  <1>          pop    rdi
+    39 00000051 C3                  <1>          ret
+    40                              <1> StrToInt64:
+    41 00000052 57                  <1>          push   rdi
+    42 00000053 B739                <1>          mov    bh, '9'
+    43 00000055 B330                <1>          mov    bl, '0'
+    44 00000057 56                  <1>          push   rsi     ; сохран€ем адрес исходной строки
+    45 00000058 803E2D              <1>          cmp    byte[rsi], '-'
+    46 0000005B 7503                <1>          jne    .prod
+    47 0000005D 48FFC6              <1>          inc    rsi     ; пропускаем знак
+    48 00000060 FC                  <1> .prod    cld
+    49 00000061 6631FF              <1>          xor    di, di  ; обнул€ем будущее число
+    50 00000064 AC                  <1> .cycle:  lodsb          ; загружаем символ (цифру)
+    51 00000065 3C0A                <1>          cmp    al, 10  ; если 10, то на конец
+    52 00000067 741F                <1>          je     .Return
+    53 00000069 38D8                <1>          cmp    al, bl  ; сравниваем с кодом нул€
+    54 0000006B 722F                <1>          jb     .Error  ; "ниже" Ц ќшибка
+    55 0000006D 38F8                <1>          cmp    al, bh  ; сравниваем с кодом дев€ти 
+    56 0000006F 772B                <1>          ja     .Error  ; "выше" Ц ќшибка
+    57 00000071 2C30                <1>          sub    al, 30h ; получаем цифру из символа
+    58 00000073 6698                <1>          cbw            ; расшир€ем до слова
+    59 00000075 6650                <1>          push   ax      ; сохран€ем в стеке
+    60 00000077 66B80A00            <1>          mov    ax, 10  ; заносим 10 в AX
+    61 0000007B 66F7E7              <1>          mul    di      ; умножаем, результат в DX:AX
+    62 0000007E 665F                <1>          pop    di      ; в DI Ц очередна€ цифра
+    63 00000080 6601F8              <1>          add    ax, di
+    64 00000083 6689C7              <1>          mov    di, ax  ; в DI Ц накопленное число        
+    65 00000086 EBDC                <1>          jmp    .cycle
+    66 00000088 5E                  <1> .Return: pop    rsi
+    67 00000089 BB00000000          <1>          mov    rbx, 0
+    68 0000008E 803E2D              <1>          cmp    byte[rsi], '-'
+    69 00000091 7503                <1>          jne    .J
+    70 00000093 66F7DF              <1>          neg    di
+    71 00000096 6689F8              <1> .J       mov    ax, di
+    72 00000099 98                  <1>          cwde
+    73 0000009A EB0B                <1>          jmp    .R
+    74 0000009C 5E                  <1> .Error:  pop    rsi
+    75 0000009D B800000000          <1>          mov    rax, 0
+    76 000000A2 BB01000000          <1>          mov    rbx, 1
+    77 000000A7 5F                  <1> .R       pop    rdi
+    78 000000A8 C3                  <1>          ret
+     2                                  
+     3                                  section .data
+     4 00000000 7468652064656E6F6D-         error db "the denominator is 0"
+     4 00000009 696E61746F72206973-
+     4 00000012 2030               
+     5                                      len_error equ $-error
+     6 00000014 6576656E                    mg_even db "even"
+     7                                      len_even equ $-mg_even
+     8 00000018 6F6464                      mg_odd db "odd"
+     9                                      len_odd equ $-mg_odd
+    10                                      
+    11                                  section .bss
+    12 00000000 ????????                    a resd 1
+    13 00000004 ????????                    b resd 1
+    14 00000008 ????????                    c resd 1
+    15 0000000C ????????                    y resd 1
+    16 00000010 ????????                    input resd 1
+    17                                      len_input equ $-input
+    18 00000014 ????????                    output resd 1
+    19                                      len_output equ $-output
+    20                                  
+    21                                  section .text
+    22                                      global _start
+    23                                          _start:
+    24                                          
+    25                                              ; read a
+    26 000000A9 B800000000                          mov rax, 0          ; system function 0 (read)
+    27 000000AE BF00000000                          mov rdi, 0          ; file descriptor stdin=0
+    28 000000B3 48BE-                               mov rsi, input      ; input line address
+    28 000000B5 [1000000000000000] 
+    29 000000BD BA04000000                          mov rdx, len_input  ; line length
+    30 000000C2 0F05                                syscall
+    31                                              
+    32                                              ; str to int
+    33 000000C4 48BE-                               mov RSI, input
+    33 000000C6 [1000000000000000] 
+    34 000000CE E87FFFFFFF                          call StrToInt64
+    35 000000D3 4883FB00                            cmp RBX, 0
+    36 000000D7 75C3                                jne StrToInt64.Error
+    37                                              
+    38 000000D9 48890425[00000000]                  mov [a], RAX
+    39                                              
+    40 000000E1 BE00000000                          mov rsi, 0
+    41                                              ; read b
+    42 000000E6 B800000000                          mov rax, 0
+    43 000000EB BF00000000                          mov rdi, 0
+    44 000000F0 48BE-                               mov rsi, input
+    44 000000F2 [1000000000000000] 
+    45 000000FA BA04000000                          mov rdx, len_input
+    46 000000FF 0F05                                syscall
+    47                                              
+    48                                              ; str to int
+    49 00000101 48BE-                               mov RSI, input
+    49 00000103 [1000000000000000] 
+    50 0000010B E842FFFFFF                          call StrToInt64
+    51 00000110 4883FB00                            cmp RBX, 0
+    52 00000114 7586                                jne StrToInt64.Error
+    53                                              
+    54 00000116 48890425[04000000]                  mov [b], RAX
+    55                                              
+    56                                              ; read c
+    57 0000011E B800000000                          mov rax, 0
+    58 00000123 BF00000000                          mov rdi, 0
+    59 00000128 48BE-                               mov rsi, input
+    59 0000012A [1000000000000000] 
+    60 00000132 BA04000000                          mov rdx, len_input
+    61 00000137 0F05                                syscall
+    62                                              
+    63                                              ; str to int
+    64 00000139 48BE-                               mov RSI, input
+    64 0000013B [1000000000000000] 
+    65 00000143 E80AFFFFFF                          call StrToInt64
+    66 00000148 4883FB00                            cmp RBX, 0
+    67 0000014C 0F854AFFFFFF                        jne StrToInt64.Error
+    68                                              
+    69 00000152 48890425[08000000]                  mov [c], RAX
+    70                                              
+    71                                              ; read y
+    72 0000015A B800000000                          mov rax, 0
+    73 0000015F BF00000000                          mov rdi, 0
+    74 00000164 48BE-                               mov rsi, input
+    74 00000166 [1000000000000000] 
+    75 0000016E BA04000000                          mov rdx, len_input
+    76 00000173 0F05                                syscall
+    77                                              
+    78                                              ; str to int
+    79 00000175 48BE-                               mov RSI, input
+    79 00000177 [1000000000000000] 
+    80 0000017F E8CEFEFFFF                          call StrToInt64
+    81 00000184 4883FB00                            cmp RBX, 0
+    82 00000188 0F850EFFFFFF                        jne StrToInt64.Error
+    83                                              
+    84 0000018E 48890425[0C000000]                  mov [y], RAX
+    85                                                          
+    86 00000196 8B0425[04000000]                    mov eax, [b]
+    87                                              ; ZF = 0 --> odd  ZF = 1 --> even
+    88 0000019D A901000000                          test eax, 1
+    89 000001A2 7502                                jnz odd                 ; ZF = 0
+    90 000001A4 741D                                jz even                 ; ZF = 1
+    91                                              
+    92                                              odd:
+    93 000001A6 B801000000                              mov rax, 1
+    94 000001AB BF01000000                              mov rdi, 1
+    95 000001B0 48BE-                                   mov rsi, mg_odd
+    95 000001B2 [1800000000000000] 
+    96 000001BA BA03000000                              mov rdx, len_odd
+    97 000001BF 0F05                                    syscall
+    98 000001C1 EB1B                                    jmp continue
+    99                                                  
+   100                                              even:
+   101 000001C3 B801000000                              mov rax, 1
+   102 000001C8 BF01000000                              mov rdi, 1
+   103 000001CD 48BE-                                   mov rsi, mg_even
+   103 000001CF [1400000000000000] 
+   104 000001D7 BA04000000                              mov rdx, len_even
+   105 000001DC 0F05                                    syscall
+   106                                                  
+   107                                              continue:
+   108 000001DE B83C000000                              mov eax, 60        ; system function 60 (exit)
+   109 000001E3 4831FF                                  xor rdi, rdi       ; return code 0
+   110 000001E6 0F05                                    syscall
