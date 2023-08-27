@@ -3,4 +3,4 @@ all:
 	ld -o branching branching.o
 
 clear:
-	rm -f *.asm *.o
+	rm -f *.o branching

@@ -3,4 +3,4 @@ all:
 	ld -o calculating calculating.o
 
 clear:
-	rm -f *.asm *.o
+	rm -f *.o calculating
