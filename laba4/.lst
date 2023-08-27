@@ -1,0 +1,235 @@
+     1                                  %include "../lib64.asm"
+     2                              <1>          section .text     ; сегмент кода
+     3                              <1> IntToStr64: 
+     4 00000000 57                  <1>          push   rdi
+     5 00000001 53                  <1>          push   rbx
+     6 00000002 52                  <1>          push   rdx
+     7 00000003 51                  <1>          push   rcx
+     8 00000004 56                  <1> 		 push   rsi
+     9 00000005 C60600              <1> 		 mov    byte[rsi],0 ; на место знака
+    10 00000008 83F800              <1>          cmp    eax,0
+    11 0000000B 7D05                <1>          jge    .l1
+    12 0000000D F7D8                <1>          neg    eax
+    13 0000000F C6062D              <1>          mov    byte[rsi],'-'
+    14 00000012 C646060A            <1> .l1      mov    byte[rsi+6],10
+    15 00000016 BF05000000          <1>          mov    rdi,5
+    16 0000001B 66BB0A00            <1>          mov    bx,10
+    17 0000001F 6699                <1> .again:  cwd           ; расширили слово до двойного
+    18 00000021 66F7F3              <1>          div    bx     ; делим результат на 10
+    19 00000024 80C230              <1>          add    dl,30h ; получаем из остатка код цифры
+    20 00000027 88143E              <1>          mov    [rsi+rdi],dl ; пишем символ в строку
+    21 0000002A 48FFCF              <1>          dec    rdi    ; переводим указатель на  
+    22                              <1>                        ; предыдущую позицию
+    23 0000002D 6683F800            <1>          cmp    ax, 0  ; преобразовали все число?
+    24 00000031 75EC                <1>          jne    .again
+    25 00000033 B906000000          <1>          mov    rcx, 6
+    26 00000038 4829F9              <1>          sub    rcx, rdi ; длина результата+знак
+    27 0000003B 4889C8              <1> 		 mov    rax,rcx
+    28 0000003E 48FFC0              <1> 		 inc    rax    ; длина результата+OA
+    29 00000041 48FFC6              <1>          inc    rsi    ; пропускаем знак
+    30 00000044 56                  <1> 		 push   rsi
+    31 00000045 488D343E            <1>          lea    rsi,[rsi+rdi] ; начало результата
+    32 00000049 5F                  <1> 		 pop    rdi
+    33 0000004A F3A4                <1>          rep movsb
+    34 0000004C 5E                  <1>          pop    rsi  
+    35 0000004D 59                  <1>          pop    rcx
+    36 0000004E 5A                  <1>          pop    rdx
+    37 0000004F 5B                  <1>          pop    rbx
+    38 00000050 5F                  <1>          pop    rdi
+    39 00000051 C3                  <1>          ret
+    40                              <1> StrToInt64:
+    41 00000052 57                  <1>          push   rdi
+    42 00000053 B739                <1>          mov    bh, '9'
+    43 00000055 B330                <1>          mov    bl, '0'
+    44 00000057 56                  <1>          push   rsi     ; сохран€ем адрес исходной строки
+    45 00000058 803E2D              <1>          cmp    byte[rsi], '-'
+    46 0000005B 7503                <1>          jne    .prod
+    47 0000005D 48FFC6              <1>          inc    rsi     ; пропускаем знак
+    48 00000060 FC                  <1> .prod    cld
+    49 00000061 6631FF              <1>          xor    di, di  ; обнул€ем будущее число
+    50 00000064 AC                  <1> .cycle:  lodsb          ; загружаем символ (цифру)
+    51 00000065 3C0A                <1>          cmp    al, 10  ; если 10, то на конец
+    52 00000067 741F                <1>          je     .Return
+    53 00000069 38D8                <1>          cmp    al, bl  ; сравниваем с кодом нул€
+    54 0000006B 722F                <1>          jb     .Error  ; "ниже" Ц ќшибка
+    55 0000006D 38F8                <1>          cmp    al, bh  ; сравниваем с кодом дев€ти 
+    56 0000006F 772B                <1>          ja     .Error  ; "выше" Ц ќшибка
+    57 00000071 2C30                <1>          sub    al, 30h ; получаем цифру из символа
+    58 00000073 6698                <1>          cbw            ; расшир€ем до слова
+    59 00000075 6650                <1>          push   ax      ; сохран€ем в стеке
+    60 00000077 66B80A00            <1>          mov    ax, 10  ; заносим 10 в AX
+    61 0000007B 66F7E7              <1>          mul    di      ; умножаем, результат в DX:AX
+    62 0000007E 665F                <1>          pop    di      ; в DI Ц очередна€ цифра
+    63 00000080 6601F8              <1>          add    ax, di
+    64 00000083 6689C7              <1>          mov    di, ax  ; в DI Ц накопленное число        
+    65 00000086 EBDC                <1>          jmp    .cycle
+    66 00000088 5E                  <1> .Return: pop    rsi
+    67 00000089 BB00000000          <1>          mov    rbx, 0
+    68 0000008E 803E2D              <1>          cmp    byte[rsi], '-'
+    69 00000091 7503                <1>          jne    .J
+    70 00000093 66F7DF              <1>          neg    di
+    71 00000096 6689F8              <1> .J       mov    ax, di
+    72 00000099 98                  <1>          cwde
+    73 0000009A EB0B                <1>          jmp    .R
+    74 0000009C 5E                  <1> .Error:  pop    rsi
+    75 0000009D B800000000          <1>          mov    rax, 0
+    76 000000A2 BB01000000          <1>          mov    rbx, 1
+    77 000000A7 5F                  <1> .R       pop    rdi
+    78 000000A8 C3                  <1>          ret
+     2                                  
+     3                                  section .data
+     4 00000000 526F7720E284962000          row db "Row вДЦ ", 0
+     5                                      len_row equ $-row
+     6 00000009 436F6C20E284962000          col db "Col вДЦ ", 0
+     7                                      len_col equ $-col
+     8 00000012 2000                        space db " ", 0
+     9                                      len_space equ $-space
+    10                                  
+    11                                  section .bss
+    12 00000000 ????????                    elems resd 1
+    13 00000004 ????????                    index resd 1
+    14 00000008 ????????                    col_number resd 1
+    15 0000000C ????????                    row_number resd 1
+    16 00000010 ????????                    result resd 1
+    17 00000014 ????????                    elem resd 1
+    18 00000018 ????????                    input resd 1
+    19                                      len_input equ $-input
+    20 0000001C ????????                    output resd 1
+    21                                      len_output equ $-output
+    22                                      
+    23                                  section .text
+    24                                      global _start
+    25                                          _start:
+    26                                              ;mov ebx, 0
+    27 000000A9 C70425[08000000]00-                 mov dword [col_number], 0
+    27 000000B1 000000             
+    28 000000B4 C70425[0C000000]01-                 mov dword [row_number], 1
+    28 000000BC 000000             
+    29 000000BF C70425[10000000]00-                 mov dword [result], 0
+    29 000000C7 000000             
+    30 000000CA C70425[00000000]1A-                 mov dword [elems], 26
+    30 000000D2 000000             
+    31 000000D5 C70425[04000000]04-                 mov dword [index], 4
+    31 000000DD 000000             
+    32                                              
+    33                                              ; COUNT + 1
+    34                                              ; LEN - 1
+    35                                              matrix_loop:
+    36 000000E0 832C25[00000000]01                      sub dword [elems], 1
+    37 000000E8 833C25[00000000]00                      cmp dword [elems], 0
+    38 000000F0 0F8468010000                            je print_result
+    39                                                  ; row
+    40 000000F6 B801000000                              mov rax, 1
+    41 000000FB BF01000000                              mov rdi, 1
+    42 00000100 48BE-                                   mov rsi, row
+    42 00000102 [0000000000000000] 
+    43 0000010A BA09000000                              mov rdx, len_row
+    44 0000010F 0F05                                    syscall
+    45 00000111 BE[1C000000]                            mov esi, output
+    46 00000116 8B0425[0C000000]                        mov eax, [row_number]
+    47 0000011D 98                                      cwde
+    48 0000011E E8DDFEFFFF                              call IntToStr64
+    49                                                  
+    50                                                  ; write number of row
+    51 00000123 B801000000                              mov rax, 1
+    52 00000128 BF01000000                              mov rdi, 1
+    53 0000012D 48BE-                                   mov rsi, output
+    53 0000012F [1C00000000000000] 
+    54 00000137 BA02000000                              mov rdx, 2
+    55 0000013C 0F05                                    syscall
+    56                                                  
+    57                                                  ; write space
+    58 0000013E B801000000                              mov rax, 1
+    59 00000143 BF01000000                              mov rdi, 1
+    60 00000148 48BE-                                   mov rsi, space
+    60 0000014A [1200000000000000] 
+    61 00000152 BA02000000                              mov rdx, len_space
+    62 00000157 0F05                                    syscall
+    63                                                  
+    64                                                  ; column
+    65 00000159 B801000000                              mov rax, 1
+    66 0000015E BF01000000                              mov rdi, 1
+    67 00000163 48BE-                                   mov rsi, col
+    67 00000165 [0900000000000000] 
+    68 0000016D BA09000000                              mov rdx, len_col
+    69 00000172 0F05                                    syscall
+    70                                                  
+    71 00000174 8B1C25[08000000]                        mov ebx, [col_number]
+    72 0000017B 83C301                                  add ebx, 1
+    73 0000017E BE[1C000000]                            mov esi, output
+    74 00000183 89D8                                    mov eax, ebx
+    75 00000185 98                                      cwde
+    76 00000186 E875FEFFFF                              call IntToStr64
+    77                                                  
+    78                                                  ; write number of column
+    79 0000018B B801000000                              mov rax, 1
+    80 00000190 BF01000000                              mov rdi, 1
+    81 00000195 48BE-                                   mov rsi, output
+    81 00000197 [1C00000000000000] 
+    82 0000019F BA02000000                              mov rdx, 2
+    83 000001A4 0F05                                    syscall
+    84                                                  
+    85                                                  ; write space
+    86 000001A6 B801000000                              mov rax, 1
+    87 000001AB BF01000000                              mov rdi, 1
+    88 000001B0 48BE-                                   mov rsi, space
+    88 000001B2 [1200000000000000] 
+    89 000001BA BA02000000                              mov rdx, len_space
+    90 000001BF 0F05                                    syscall
+    91                                                  
+    92                                                  ; read elem
+    93 000001C1 B800000000                              mov rax, 0
+    94 000001C6 BF00000000                              mov rdi, 0
+    95 000001CB 48BE-                                   mov rsi, input
+    95 000001CD [1800000000000000] 
+    96 000001D5 BA04000000                              mov rdx, len_input
+    97 000001DA 0F05                                    syscall
+    98                                                  
+    99                                                  ; str to int
+   100 000001DC 48BE-                                   mov RSI, input
+   100 000001DE [1800000000000000] 
+   101 000001E6 E867FEFFFF                              call StrToInt64
+   102 000001EB 4883FB00                                cmp RBX, 0
+   103 000001EF 0F85A7FEFFFF                            jne StrToInt64.Error
+   104 000001F5 48890425[14000000]                      mov [elem], RAX
+   105 000001FD 8B1C25[08000000]                        mov ebx, [col_number]
+   106 00000204 8B0425[04000000]                        mov eax, [index]
+   107 0000020B 39C3                                    cmp ebx, eax
+   108                                                  
+   109                                                  ; column number < index
+   110 0000020D 7D18                                    jnl continue
+   111 0000020F 833C25[14000000]00                      cmp dword [elem], 0 ; elem > 0
+   112 00000217 7C0E                                    jl continue
+   113 00000219 8B1C25[14000000]                        mov ebx, [elem]
+   114                                                  ; result + elem
+   115 00000220 011C25[10000000]                        add [result], ebx
+   116                                                  continue:
+   117 00000227 833C25[08000000]04                          cmp dword [col_number], 4
+   118                                                      ; LEN - 1
+   119 0000022F 7C20                                        jl increasing
+   120 00000231 C70425[08000000]00-                         mov dword [col_number], 0
+   120 00000239 000000             
+   121 0000023C 832C25[04000000]01                          sub dword [index], 1
+   122 00000244 830425[0C000000]01                          add dword [row_number], 1
+   123 0000024C E98FFEFFFF                                  jmp matrix_loop
+   124                                                      
+   125                                                  increasing:
+   126 00000251 830425[08000000]01                          add dword [col_number], 1
+   127 00000259 E982FEFFFF                                  jmp matrix_loop
+   128                                                  
+   129                                                  print_result:
+   130 0000025E BE[1C000000]                                mov esi, output
+   131 00000263 8B0425[10000000]                            mov eax, [result]
+   132 0000026A 98                                          cwde
+   133 0000026B E890FDFFFF                                  call IntToStr64
+   134                                                      ; write
+   135 00000270 B801000000                                  mov rax, 1
+   136 00000275 BF01000000                                  mov rdi, 1
+   137 0000027A 48BE-                                       mov rsi, output
+   137 0000027C [1C00000000000000] 
+   138 00000284 BA04000000                                  mov rdx, len_output
+   139 00000289 0F05                                        syscall
+   140                                              exit:
+   141 0000028B B83C000000                              mov eax, 60
+   142 00000290 4831FF                                  xor rdi, rdi
+   143 00000293 0F05                                    syscall
